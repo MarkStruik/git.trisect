@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -98,8 +99,24 @@ func (m model) View() string {
 
 func main() {
 	p := tea.NewProgram(initialModel())
-	if _, err := p.Run(); err != nil {
+	m, err := p.Run()
+	if err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
 		os.Exit(1)
+	}
+	if m, ok := m.(model); ok && m.selected != nil {
+		s := strings.Builder{}
+		hasPrevSelection := false
+		for i, choice := range m.choices {
+			if _, ok := m.selected[i]; ok {
+				if hasPrevSelection {
+					s.WriteString(", ")
+				}
+				s.WriteString(choice)
+				hasPrevSelection = true
+			}
+		}
+		fmt.Println(s.String())
+
 	}
 }
