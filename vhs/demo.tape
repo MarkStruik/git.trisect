@@ -7,7 +7,7 @@ Set MarginFill "#6B50FF"
 Set BorderRadius 10
 Set Shell pwsh
 Sleep 1s
-Type "..\out\git-trisect"
+Type "git-trisect"
 Enter
 Sleep 1s
 Type "j"
