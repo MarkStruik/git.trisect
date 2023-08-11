@@ -3,22 +3,37 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 
+	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+type item struct {
+	title, desc string
+}
+
+func (i item) Title() string       { return i.title }
+func (i item) Description() string { return i.desc }
+func (i item) FilterValue() string { return i.title }
+
 type model struct {
-	choices  []string
-	cursor   int
-	selected map[int]struct{}
+	list     list.Model
+	selected item
+	width    int
+	height   int
 }
 
 func initialModel() model {
-	return model{
-		choices:  []string{"Buy carrots", "Buy celery", "buy kohlrabi"},
-		selected: make(map[int]struct{}),
+	items := []list.Item{
+		item{title: "Something", desc: "special"},
+		item{title: "Buy", desc: "me a coffee"},
 	}
+
+	m := model{
+		list: list.New(items, list.NewDefaultDelegate(), 0, 0),
+	}
+	m.list.Title = "What should we buy?"
+	return m
 }
 
 func (m model) Init() tea.Cmd {
@@ -28,6 +43,10 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
+	case tea.WindowSizeMsg:
+		m.height = msg.Height
+		m.width = msg.Width
+		m.list.SetSize(m.width, m.height)
 	// Is it a key press?
 	case tea.KeyMsg:
 
@@ -37,63 +56,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// These keys should exit the program.
 		case "ctrl+c", "q":
 			return m, tea.Quit
-
-		// The "up" and "k" keys move the cursor up
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-
-		// The "down" and "j" keys move the cursor down
-		case "down", "j":
-			if m.cursor < len(m.choices)-1 {
-				m.cursor++
-			}
-
-		// The "enter" key and the spacebar (a literal space) toggle
-		// the selected state for the item that the cursor is pointing at.
-		case "enter", " ":
-			_, ok := m.selected[m.cursor]
-			if ok {
-				delete(m.selected, m.cursor)
-			} else {
-				m.selected[m.cursor] = struct{}{}
-			}
+		case "enter":
+			m.selected = m.list.SelectedItem().(item)
+			return m, tea.Quit
 		}
 	}
 
+	// update list
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
+
 	// Return the updated model to the Bubble Tea runtime for processing.
 	// Note that we're not returning a command.
-	return m, nil
+	return m, cmd
 }
 
 func (m model) View() string {
 	// The header
-	s := "What should we buy at the market?\n\n"
+	s := m.list.View()
 
-	// Iterate over our choices
-	for i, choice := range m.choices {
-
-		// Is the cursor pointing at this choice?
-		cursor := " " // no cursor
-		if m.cursor == i {
-			cursor = ">" // cursor!
-		}
-
-		// Is this choice selected?
-		checked := " " // not selected
-		if _, ok := m.selected[i]; ok {
-			checked = "x" // selected!
-		}
-
-		// Render the row
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
-	}
-
-	// The footer
-	s += "\nPress q to quit.\n"
-
-	// Send the UI for rendering
 	return s
 }
 
@@ -104,19 +85,7 @@ func main() {
 		fmt.Printf("Alas, there's been an error: %v", err)
 		os.Exit(1)
 	}
-	if m, ok := m.(model); ok && m.selected != nil {
-		s := strings.Builder{}
-		hasPrevSelection := false
-		for i, choice := range m.choices {
-			if _, ok := m.selected[i]; ok {
-				if hasPrevSelection {
-					s.WriteString(", ")
-				}
-				s.WriteString(choice)
-				hasPrevSelection = true
-			}
-		}
-		fmt.Println(s.String())
-
+	if m, ok := m.(model); ok && m.selected.title != "" {
+		fmt.Println(m.selected.title)
 	}
 }
