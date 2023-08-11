@@ -13,3 +13,8 @@ the better bisect
     - [ ] ask user if they want to npm ci
 - [ ] wait for confirmation ( good/bad/skip/close )
 - [ ] continue until find the wrong version or close
+
+
+## Demo
+
+![](vhs/demo.gif)
