@@ -1,3 +1,4 @@
+# use in out folder
 Output demo.gif
 Set Width 1200
 Set Height 900
@@ -6,8 +7,9 @@ Set Margin 60
 Set MarginFill "#6B50FF"
 Set BorderRadius 10
 Set Shell pwsh
-Sleep 1s
-Type "git-trisect"
+Type "git"
+Tab
+Sleep 2s
 Enter
 Sleep 1s
 Type "j"
@@ -16,5 +18,6 @@ Type "j"
 Sleep 1s
 Type "k"
 Sleep 1s
+Type@500ms "/demo"
 Enter
-Sleep 5s
+Sleep 3s
