@@ -65,7 +65,7 @@ type gitLog struct {
 
 func (i gitLog) Title() string       { return i.author + " " + i.message }
 func (i gitLog) Description() string { return i.date + " " + i.githash }
-func (i gitLog) FilterValue() string { return i.message }
+func (i gitLog) FilterValue() string { return i.author + " " + i.message }
 func (i gitLog) Item() gitLog        { return i }
 
 type gitLogMsg struct {
