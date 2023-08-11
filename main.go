@@ -15,6 +15,7 @@ type model struct {
 	selected gitLog
 	height   int
 	width    int
+	message  string
 }
 
 func initialModel() model {
@@ -28,21 +29,41 @@ func initialModel() model {
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(tea.EnterAltScreen, getGitLogs)
+	return tea.Batch(tea.EnterAltScreen, getGitLogs, getGitBranch)
 }
+
+func getGitBranch() tea.Msg {
+	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
+
+	if err != nil {
+		return errMsg{err}
+	}
+	branchName := string(out)
+	branchName = strings.Replace(branchName, "\n", "", 1)
+
+	return gitBranchMsg{branchName}
+}
+
+type gitBranchMsg struct {
+	branchName string
+}
+
+type sayHello string
 
 func getGitLogs() tea.Msg {
 	out, err := exec.Command("git", "log", "--format='%H||%an||%as||%s").Output()
 	if err != nil {
-		return gitLogMsg{error: err}
+		return errMsg{err}
 	}
+
+	// sending message into the program :)
+	p.Send(sayHello("hi baby :)"))
 
 	gitLogString := string(out)
 	x := strings.Split(gitLogString, "\n")
 	items := []gitLog{}
 	for _, line := range x {
 		cols := strings.Split(line, "||")
-		fmt.Println(cols)
 		if len(cols) == 4 {
 			items = append(items, gitLog{
 				githash: cols[0],
@@ -53,7 +74,7 @@ func getGitLogs() tea.Msg {
 		}
 	}
 
-	return gitLogMsg{logs: items, error: nil}
+	return gitLogMsg{logs: items}
 }
 
 type gitLog struct {
@@ -69,18 +90,24 @@ func (i gitLog) FilterValue() string { return i.author + " " + i.message }
 func (i gitLog) Item() gitLog        { return i }
 
 type gitLogMsg struct {
-	logs  []gitLog
-	error error
+	logs []gitLog
 }
+
+type errMsg struct{ err error }
+
+func (e errMsg) Error() string { return e.err.Error() }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case gitBranchMsg:
+		m.list.Title = msg.branchName + ": " + m.list.Title
+	case errMsg:
+		// todo: do something with errors
+
+	case sayHello:
+		m.message = string(msg)
 	case gitLogMsg:
 		items := m.list.Items()
-		if msg.error != nil {
-			// todo: error handling
-			return m, nil
-		}
 		for _, item := range msg.logs {
 			items = append(items, item)
 		}
@@ -120,8 +147,10 @@ func (m model) View() string {
 	return s
 }
 
+var p *tea.Program
+
 func main() {
-	p := tea.NewProgram(initialModel())
+	p = tea.NewProgram(initialModel())
 	m, err := p.Run()
 	if err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
