@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -21,6 +22,7 @@ type model struct {
 	selected item
 	width    int
 	height   int
+	log      string
 }
 
 func initialModel() model {
@@ -40,18 +42,35 @@ func (m model) Init() tea.Cmd {
 	return tea.EnterAltScreen
 }
 
+func getGitLogs() tea.Msg {
+	out, err := exec.Command("git", "log").Output()
+	var message string
+	if err != nil {
+		message = err.Error()
+		return gitLogMsg(message)
+	}
+	// todo: build our own model to cope with the logs :)
+	return gitLogMsg(fmt.Sprintf("The git log is:\n%s", out))
+}
+
+type gitLogMsg string
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case gitLogMsg:
+		m.log = string(msg)
 
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
 		m.width = msg.Width
-		m.list.SetSize(m.width, m.height)
+		m.list.SetSize(m.width, m.height/2)
 	// Is it a key press?
 	case tea.KeyMsg:
 
 		// Cool, what was the actual key pressed?
 		switch msg.String() {
+		case "ctrl+l":
+			return m, getGitLogs
 
 		// These keys should exit the program.
 		case "ctrl+c", "q":
@@ -74,7 +93,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	// The header
 	s := m.list.View()
-
+	if m.log != "" {
+		s += "\n" + m.log
+	}
 	return s
 }
 
